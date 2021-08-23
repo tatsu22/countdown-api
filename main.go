@@ -11,8 +11,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/sirupsen/logrus"
-	"github.com/tatsu22/docker-gs-ping/src/node"
-	"github.com/tatsu22/docker-gs-ping/src/utils"
 )
 
 type DetailedRequest struct {
@@ -90,12 +88,12 @@ func playGame(goal int, playNums []int) CompletedGame {
 	logrus.Info("Playing game :", playNums, goal)
 	start := time.Now()
 
-	available := []node.Node{}
-	base := node.GenBaseNode(playNums)
+	available := []Node{}
+	base := GenBaseNode(playNums)
 	base.GenChildren()
 
 	available = append(available, base.Children...)
-	calc := node.Node{}
+	calc := Node{}
 	numNodesCalculated := 0
 
 	for {
@@ -118,12 +116,12 @@ func playGame(goal int, playNums []int) CompletedGame {
 				game.EquationArray = child.Equation
 				game.Nums = playNums
 				game.Complete = true
-				game.Equation = node.EquationToString(game.EquationArray)
+				game.Equation = EquationToString(game.EquationArray)
 				logrus.Info("Returning game: ", game)
 				return *game
 			}
-			if !node.ContainsNode(available, child) {
-				available = node.InsertSorted(available, child, goal)
+			if !ContainsNode(available, child) {
+				available = InsertSorted(available, child, goal)
 			}
 		}
 		if numNodesCalculated%100 == 0 {
@@ -146,7 +144,7 @@ func genRandomGame() DetailedRequest {
 	for i := 0; i < 6; i++ {
 		index := rand.Intn(len(availableNums))
 		numsList = append(numsList, availableNums[index])
-		availableNums = utils.RemoveElement(availableNums, index)
+		availableNums = RemoveElement(availableNums, index)
 	}
 
 	goal := rand.Intn(900) + 100
@@ -156,7 +154,7 @@ func genRandomGame() DetailedRequest {
 
 func genGame(req PlayRequest) (DetailedRequest, error) {
 	if req.NumBig+req.NumSmall != 6 || req.NumBig > 4 || req.NumBig < 0 || req.NumSmall < 2 {
-		return DetailedRequest{}, errors.New("Invalid configuration for game")
+		return DetailedRequest{}, errors.New("invalid configuration for game")
 	}
 
 	smallNumList := []int{1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10}
@@ -167,13 +165,13 @@ func genGame(req PlayRequest) (DetailedRequest, error) {
 	for i := 0; i < req.NumSmall; i++ {
 		index := rand.Intn(len(smallNumList))
 		numsList = append(numsList, smallNumList[index])
-		smallNumList = utils.RemoveElement(smallNumList, index)
+		smallNumList = RemoveElement(smallNumList, index)
 	}
 
 	for i := 0; i < req.NumBig; i++ {
 		index := rand.Intn(len(bigNumList))
 		numsList = append(numsList, bigNumList[index])
-		bigNumList = utils.RemoveElement(bigNumList, index)
+		bigNumList = RemoveElement(bigNumList, index)
 	}
 
 	goal := rand.Intn(900) + 100

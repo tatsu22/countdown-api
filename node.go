@@ -1,11 +1,10 @@
-package node
+package main
 
 import (
 	"fmt"
 	"sort"
 
 	"github.com/sirupsen/logrus"
-	"github.com/tatsu22/docker-gs-ping/src/utils"
 )
 
 var Operations = [4]string{"+", "-", "*", "/"}
@@ -38,14 +37,14 @@ func (node *Node) GenChildren() {
 	}
 
 	for _, v := range Operations {
-		if utils.IsValidEquation(append(node.Equation, v)) {
+		if IsValidEquation(append(node.Equation, v)) {
 			newEquation := make([]string, len(node.Equation))
 			copy(newEquation, node.Equation)
 			newEquation = append(newEquation, v)
 			logrus.Debug("Equation is valid: ", newEquation)
 			if len(newEquation) > 2 {
-				if utils.IsCompleteEquation(newEquation) {
-					newResult, err := utils.EvaluateEquation(newEquation)
+				if IsCompleteEquation(newEquation) {
+					newResult, err := EvaluateEquation(newEquation)
 					if err == nil {
 						logrus.Debug("Equation is valid and complete, result is: ", newResult)
 						node.Children = append(node.Children, Node{Equation: newEquation, RemainingNums: node.RemainingNums, Result: newResult})
@@ -71,7 +70,7 @@ func (node *Node) GenChildren() {
 		newEquation := make([]string, len(node.Equation))
 		copy(newEquation, node.Equation)
 		newEquation = append(newEquation, fmt.Sprint(v))
-		newRemainingNums := utils.RemoveElement(node.RemainingNums, i)
+		newRemainingNums := RemoveElement(node.RemainingNums, i)
 		node.Children = append(node.Children, Node{Equation: newEquation, RemainingNums: newRemainingNums, Result: node.Result})
 	}
 
@@ -89,7 +88,7 @@ func GenBaseNode(nums []int) *Node {
 
 func InsertSorted(s []Node, e Node, goal int) []Node {
 	// This will not guarantee shortest solution, but is faster than looking for shortest
-	i := sort.Search(len(s), func(i int) bool { return utils.AbsVal(s[i].Result-goal) > utils.AbsVal(e.Result-goal) })
+	i := sort.Search(len(s), func(i int) bool { return AbsVal(s[i].Result-goal) > AbsVal(e.Result-goal) })
 
 	// This will give us shortest solution guaranteed
 	// i := sort.Search(len(s), func(i int) bool {
@@ -147,7 +146,7 @@ func EquationToString(equation []string) string {
 	queue := []string{}
 
 	for _, v := range equation {
-		_, err := utils.IsNumber(v)
+		_, err := IsNumber(v)
 		if err == nil {
 			queue = append(queue, v)
 		} else {
