@@ -2,23 +2,38 @@ package utils
 
 import (
 	"errors"
+	"strconv"
+
+	"github.com/sirupsen/logrus"
 )
 
-func IsValidEquation(equation []byte) bool {
+func IsValidEquation(equation []string) bool {
 
-	if !IsNumber(equation[0]) || !IsNumber(equation[1]) {
-		return false
+	if len(equation) == 1 {
+		_, err := IsNumber(equation[0])
+		// logrus.Info("Length is 1, and equation is valid: ", err == nil)
+		return err == nil
+	}
+
+	if len(equation) == 2 {
+		_, err1 := IsNumber(equation[0])
+		_, err2 := IsNumber(equation[1])
+
+		// logrus.Info("equation is length 2, both are numbers: ", err1 == nil && err2 == nil)
+		return err1 == nil && err2 == nil
 	}
 
 	numNums := 0
 	numOps := 0
 
 	for i := 0; i < len(equation); i++ {
-		if IsNumber(equation[i]) {
+		_, err := IsNumber(equation[i])
+		if err == nil {
 			numNums++
 		} else {
 			numOps++
 			if numOps >= numNums {
+				// logrus.Info("Number of operation bits is equal or greater than number of numbers")
 				return false
 			}
 		}
@@ -27,23 +42,54 @@ func IsValidEquation(equation []byte) bool {
 	return true
 }
 
-func EvaluateEquation(equation []byte) (int, error) {
+func IsCompleteEquation(equation []string) bool {
+	numNums := 0
+	numOps := 0
+	for i := 0; i < len(equation); i++ {
+		_, err := IsNumber(equation[i])
+		if err == nil {
+			numNums++
+		} else {
+			numOps++
+			if numOps >= numNums {
+				// logrus.Info("Number of operation bits is equal or greater than number of numbers")
+				return false
+			}
+		}
+	}
+
+	if numNums == numOps+1 {
+		logrus.Debug("Equation is complete")
+		return true
+	} else {
+		logrus.Debug("Equation is incomplete")
+		return false
+	}
+
+}
+
+func EvaluateEquation(equation []string) (int, error) {
 	queue := []int{}
 
 	for _, v := range equation {
-		if IsNumber(v) {
-			queue = append(queue, int(v))
+		newNum, err := IsNumber(v)
+
+		if err == nil {
+			queue = append(queue, newNum)
 		} else {
 			var method = add
 			length := len(queue)
+			if length < 2 {
+				return -1, errors.New("not enough numbers for operation")
+			}
 			switch v {
-			case '*':
+			case "*":
 				method = multiply
-			case '+':
+			case "+":
 				method = add
-			case '-':
+			case "-":
 				method = sub
-			case '/':
+			case "/":
 				method = divide
 			}
 			newNum, err := method(queue[length-1], queue[length-2])
@@ -63,28 +109,40 @@ func add(a, b int) (int, error) {
 }
 
 func sub(a, b int) (int, error) {
-	if a-b < 0 {
-		return -1, errors.New("subtraction resulted in negative number")
+	if a-b <= 0 {
+		return -1, errors.New("subtraction resulted in 0 or negative number")
 	}
 	return a - b, nil
 }
 
 func multiply(a, b int) (int, error) {
+	if a == 1 || b == 1 {
+		return -1, errors.New("multiplying by 1 is useless")
+	}
 	return a * b, nil
 }
 
 func divide(a, b int) (int, error) {
-	if a%b == 0 {
+	if a%b == 0 && b != 0 && a != b && a != 1 && b != 1 {
 		return a / b, nil
 	}
-	return -1, errors.New("division resulted in remainder")
+	return -1, errors.New("division resulted in remainder, dividing by 0 or 1, or dividing by self")
 }
 
-func IsNumber(q byte) bool {
-	return '0' <= q && q <= '9'
+func IsNumber(q string) (int, error) {
+	return strconv.Atoi(q)
 }
 
 func RemoveElement(s []int, i int) []int {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
+	newArray := make([]int, len(s))
+	copy(newArray, s)
+	newArray[i] = newArray[len(newArray)-1]
+	return newArray[:len(newArray)-1]
+}
+
+func AbsVal(i int) int {
+	if i < 0 {
+		return -i
+	}
+	return i
 }
