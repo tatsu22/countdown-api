@@ -13,7 +13,7 @@ RUN go mod download
 COPY *.go ./
 
 # Build
-RUN env GOOS=linux GOARCH=arm GOARM=7 go build -o /docker-gs-ping
+RUN env GOOS=linux GOARCH=arm GOARM=7 go build -o /countdown-api
 # RUN go build -o /docker-gs-ping
 
 # This is for documentation purposes only.
@@ -28,4 +28,4 @@ EXPOSE 8080
 #ENV HTTP_PORT=8081
 
 # Run
-CMD [ "/docker-gs-ping" ]
+CMD [ "/countdown-api" ]

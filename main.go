@@ -54,6 +54,7 @@ func main() {
 		return c.JSON(http.StatusOK, playGameReq(*req))
 	})
 
+	// TODO: Use query parameters to generate game
 	e.GET("/game", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, playGameReq(genRandomGame()))
 	})
