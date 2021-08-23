@@ -151,7 +151,7 @@ func EquationToString(equation []string) string {
 			queue = append(queue, v)
 		} else {
 			length := len(queue)
-			newInfix := "(" + queue[length-2] + v + queue[length-1] + ")"
+			newInfix := "(" + queue[length-1] + v + queue[length-2] + ")"
 			queue = append(queue[:length-2], newInfix)
 		}
 	}
