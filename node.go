@@ -12,11 +12,10 @@ var Operations = [4]string{"+", "-", "*", "/"}
 type Node struct {
 	Result        int `json:"result"`
 	Equation      []string
-	Children      []Node
 	RemainingNums []int
 }
 
-func (node *Node) GenChildren() {
+func (node *Node) GenChildren() []Node {
 	logrus.Debug("Generating children for node: ", node)
 	logrus.Debug("Going through possible operations")
 
@@ -33,8 +32,10 @@ func (node *Node) GenChildren() {
 	if len(node.Equation) >= 11 {
 		logrus.Debug("Generating no new children, node is at tip")
 		logrus.Debug("Node: ", node)
-		return
+		return []Node{}
 	}
+
+	var children []Node
 
 	for _, v := range Operations {
 		if IsValidEquation(append(node.Equation, v)) {
@@ -47,15 +48,15 @@ func (node *Node) GenChildren() {
 					newResult, err := EvaluateEquation(newEquation)
 					if err == nil {
 						logrus.Debug("Equation is valid and complete, result is: ", newResult)
-						node.Children = append(node.Children, Node{Equation: newEquation, RemainingNums: node.RemainingNums, Result: newResult})
+						children = append(children, Node{Equation: newEquation, RemainingNums: node.RemainingNums, Result: newResult})
 					}
 				} else {
 					logrus.Debug("Equation is valid but incomplete, setting result to parent: ", node.Result)
-					node.Children = append(node.Children, Node{Equation: newEquation, RemainingNums: node.RemainingNums, Result: node.Result})
+					children = append(children, Node{Equation: newEquation, RemainingNums: node.RemainingNums, Result: node.Result})
 				}
 			} else {
 				logrus.Warn("You should not see this, added operation and length <= 2")
-				node.Children = append(node.Children, Node{Equation: newEquation, RemainingNums: node.RemainingNums, Result: 0})
+				children = append(children, Node{Equation: newEquation, RemainingNums: node.RemainingNums, Result: 0})
 			}
 			// logrus.Debug("added node: ", node.Children[len(node.Children)-1])
 		}
@@ -71,14 +72,15 @@ func (node *Node) GenChildren() {
 		copy(newEquation, node.Equation)
 		newEquation = append(newEquation, fmt.Sprint(v))
 		newRemainingNums := RemoveElement(node.RemainingNums, i)
-		node.Children = append(node.Children, Node{Equation: newEquation, RemainingNums: newRemainingNums, Result: node.Result})
+		children = append(children, Node{Equation: newEquation, RemainingNums: newRemainingNums, Result: node.Result})
 	}
 
 	logrus.Debug("Generated children for node: ", node)
 	logrus.Debug("Children: ")
-	for _, v := range node.Children {
+	for _, v := range children {
 		logrus.Debug(v)
 	}
+	return children
 }
 
 // Generates node with no equation and all remaining nums
@@ -86,9 +88,21 @@ func GenBaseNode(nums []int) *Node {
 	return &Node{Equation: []string{}, RemainingNums: nums, Result: 0}
 }
 
-func InsertSorted(s []Node, e Node, goal int) []Node {
+func InsertSorted(s []Node, e Node, goal int, shortest bool) []Node {
 	// This will not guarantee shortest solution, but is faster than looking for shortest
-	i := sort.Search(len(s), func(i int) bool { return AbsVal(s[i].Result-goal) > AbsVal(e.Result-goal) })
+
+	var i int
+
+	if shortest {
+		i = sort.Search(len(s), func(i int) bool {
+			if len(s[i].Equation) == len(e.Equation) {
+				return AbsVal(s[i].Result-goal) > AbsVal(e.Result-goal)
+			}
+			return len(s[i].Equation) > len(e.Equation)
+		})
+	} else {
+		i = sort.Search(len(s), func(i int) bool { return AbsVal(s[i].Result-goal) > AbsVal(e.Result-goal) })
+	}
 
 	// This will give us shortest solution guaranteed
 	// i := sort.Search(len(s), func(i int) bool {
