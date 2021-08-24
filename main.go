@@ -199,7 +199,7 @@ func playGame(goal int, playNums []int) CompletedGame {
 			// that take about 500k nodes. If I find a use case where it's better to sort,
 			// then I will uncomment this code
 			// if !ContainsNode(available, child) {
-			// available = InsertSorted(available, child, goal, shortest)
+			// 	available = InsertSorted(available, child, goal, shortest)
 			// }
 		}
 		available = append(available, newNodes...)
