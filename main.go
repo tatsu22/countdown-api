@@ -207,10 +207,11 @@ func playGame(goal int, playNums []int) CompletedGame {
 			if time.Since(start).Minutes() >= 1.0 {
 				logrus.Info("Game could not be completed")
 				return CompletedGame{
-					Nums:      playNums,
-					Complete:  false,
-					Goal:      goal,
-					TimeTaken: time.Since(start).String(),
+					Nums:            playNums,
+					Complete:        false,
+					Goal:            goal,
+					TimeTaken:       time.Since(start).String(),
+					NodesCalculated: numNodesCalculated,
 				}
 			}
 		}
