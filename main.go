@@ -24,12 +24,13 @@ type PlayRequest struct {
 }
 
 type CompletedGame struct {
-	Nums          []int    `json:"nums"`
-	Goal          int      `json:"goal"`
-	EquationArray []string `json:"equationArray"`
-	Equation      string   `json:"equation"`
-	Complete      bool     `json:"complete"`
-	TimeTaken     string   `json:"timeTaken"`
+	Nums            []int    `json:"nums"`
+	Goal            int      `json:"goal"`
+	EquationArray   []string `json:"equationArray"`
+	Equation        string   `json:"equation"`
+	Complete        bool     `json:"complete"`
+	TimeTaken       string   `json:"timeTaken"`
+	NodesCalculated int      `json:"nodesCalculated"`
 }
 
 type ErrorResponse struct {
@@ -138,28 +139,31 @@ func playGame(goal int, playNums []int, shortest bool) CompletedGame {
 				elapsed := time.Since(start)
 				logrus.Info("Took ", elapsed)
 				logrus.Info("Num nodes calculated: ", numNodesCalculated)
-				game := new(CompletedGame)
-				game.Goal = goal
-				game.EquationArray = child.Equation
-				game.Nums = playNums
-				game.Complete = true
-				game.Equation = EquationToString(game.EquationArray)
-				game.TimeTaken = elapsed.String()
+				game := CompletedGame{
+					Goal:            goal,
+					EquationArray:   child.Equation,
+					Nums:            playNums,
+					Complete:        true,
+					Equation:        EquationToString(child.Equation),
+					TimeTaken:       elapsed.String(),
+					NodesCalculated: numNodesCalculated,
+				}
 				logrus.Info("Returning game: ", game)
-				return *game
+				return game
 			}
 			if !ContainsNode(available, child) {
-				available = InsertSorted(available, child, goal, shortest)
+				// available = InsertSorted(available, child, goal, shortest)
+				available = append(available, child)
 			}
 		}
-		if numNodesCalculated%100 == 0 {
+		if numNodesCalculated%1000 == 0 {
 			if time.Since(start).Minutes() >= 1.0 {
 				logrus.Info("Game could not be completed")
-				game := new(CompletedGame)
-				game.Nums = playNums
-				game.Complete = false
-				game.Goal = goal
-				return *game
+				return CompletedGame{
+					Nums:     playNums,
+					Complete: false,
+					Goal:     goal,
+				}
 			}
 		}
 	}
