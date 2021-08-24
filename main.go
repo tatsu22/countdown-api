@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -13,14 +15,8 @@ import (
 )
 
 type DetailedRequest struct {
-	Nums     []int `json:"nums"`
-	Goal     int   `json:"goal"`
-	Shortest bool  `json:"shortest"`
-}
-
-type PlayRequest struct {
-	NumSmall int `json:"numSmall"`
-	NumBig   int `json:"numBig"`
+	Nums []int `json:"nums"`
+	Goal int   `json:"goal"`
 }
 
 type CompletedGame struct {
@@ -34,7 +30,8 @@ type CompletedGame struct {
 }
 
 type ErrorResponse struct {
-	Error string `json:"errorMsg"`
+	Message string `json:"message"`
+	Error   error  `json:"errorMsg"`
 }
 
 func main() {
@@ -65,7 +62,9 @@ func main() {
 		numsStrings := strings.Split(c.QueryParam("nums"), ",")
 		if len(numsStrings) != 6 {
 			logrus.Info("Missing nums query parameter")
-			return c.JSON(http.StatusBadRequest, struct{ Error string }{Error: "'nums' query parameter missing"})
+			return c.JSON(http.StatusBadRequest, ErrorResponse{
+				Message: "'nums' query parameter missing",
+			})
 		}
 		nums := make([]int, len(numsStrings))
 		var err error
@@ -73,34 +72,70 @@ func main() {
 			nums[i], err = strconv.Atoi(v)
 			if err != nil {
 				logrus.Info("Error when converting nums string to ints", err)
-				return c.JSON(http.StatusBadRequest, struct{ Error string }{Error: "Could not convert nums to integers"})
+				return c.JSON(http.StatusBadRequest, ErrorResponse{
+					Message: "Could not convert nums to integers",
+					Error:   err,
+				})
 			}
 		}
 
 		goal, err := strconv.Atoi(c.QueryParam("goal"))
 		if err != nil {
 			logrus.Info("Error when converting goal to ints", err)
-			return c.JSON(http.StatusBadRequest, struct{ Error string }{Error: "Could not convert goal to integer"})
+			return c.JSON(http.StatusBadRequest, ErrorResponse{
+				Message: "Could not convert goal to integer",
+				Error:   err,
+			})
 		}
 
-		shortestString := c.QueryParam("shortest")
-		var shortest bool
-		if len(shortestString) == 0 {
-			logrus.Debug("Defaulting shortest to false")
-			shortest = false
-		} else {
-			shortest, err = strconv.ParseBool(shortestString)
-			if err != nil {
-				logrus.Info("Error when converting shortest to bool", err)
-				return c.JSON(http.StatusBadRequest, struct{ Error string }{Error: "Could not parse shortest to bool"})
-			}
-		}
+		// shortestString := c.QueryParam("shortest")
+		// var shortest bool
+		// if len(shortestString) == 0 {
+		// 	logrus.Debug("Defaulting shortest to false")
+		// 	shortest = false
+		// } else {
+		// 	shortest, err = strconv.ParseBool(shortestString)
+		// 	if err != nil {
+		// 		logrus.Info("Error when converting shortest to bool", err)
+		// 		return c.JSON(http.StatusBadRequest, struct{ Error string }{Error: "Could not parse shortest to bool"})
+		// 	}
+		// }
 
-		req := DetailedRequest{Nums: nums, Goal: goal, Shortest: shortest}
+		req := DetailedRequest{Nums: nums, Goal: goal}
 		return c.JSON(http.StatusOK, playGameReq(req))
 	})
 
-	httpPort := os.Getenv("HTTP_PORT")
+	e.GET("/createGame", func(c echo.Context) error {
+		numSmall, err := strconv.Atoi(c.QueryParam("numSmall"))
+		if err != nil {
+			logrus.Info("Error when parsing numSmall query param: ", c.QueryParam("numSmall"))
+			return c.JSON(http.StatusBadRequest, ErrorResponse{
+				Message: "Could not convert numSmall to integer",
+				Error:   err,
+			})
+		}
+
+		numBig, err := strconv.Atoi(c.QueryParam("numBig"))
+		if err != nil {
+			logrus.Info("Error when parsing numBig query param: ", c.QueryParam("numBig"))
+			return c.JSON(http.StatusBadRequest, ErrorResponse{
+				Message: "Could not convert numBig to integer",
+				Error:   err,
+			})
+		}
+
+		game, err := genGame(numSmall, numBig)
+		if err != nil {
+			logrus.Info("Error when generating game based on small and big nums: ", numSmall, numBig)
+			return c.JSON(http.StatusBadRequest, ErrorResponse{
+				Message: "Could not generate game based on input",
+				Error:   err,
+			})
+		}
+		return c.JSON(http.StatusOK, game)
+	})
+
+	httpPort := os.Getenv("COUNTDOWN_HTTP_PORT")
 	if httpPort == "" {
 		httpPort = "8080"
 	}
@@ -109,10 +144,10 @@ func main() {
 }
 
 func playGameReq(req DetailedRequest) CompletedGame {
-	return playGame(req.Goal, req.Nums, req.Shortest)
+	return playGame(req.Goal, req.Nums)
 }
 
-func playGame(goal int, playNums []int, shortest bool) CompletedGame {
+func playGame(goal int, playNums []int) CompletedGame {
 	logrus.Info("Playing game :", playNums, goal)
 	start := time.Now()
 
@@ -127,7 +162,13 @@ func playGame(goal int, playNums []int, shortest bool) CompletedGame {
 	for {
 		if len(available) == 0 {
 			logrus.Warn("No solution!")
-			return CompletedGame{}
+			return CompletedGame{
+				Nums:            playNums,
+				Goal:            goal,
+				Complete:        false,
+				TimeTaken:       time.Since(start).String(),
+				NodesCalculated: numNodesCalculated,
+			}
 		}
 		calc, available = available[0], available[1:]
 		logrus.Debug("Calculating node: ", calc)
@@ -151,47 +192,68 @@ func playGame(goal int, playNums []int, shortest bool) CompletedGame {
 				logrus.Info("Returning game: ", game)
 				return game
 			}
-			if !ContainsNode(available, child) {
-				// available = InsertSorted(available, child, goal, shortest)
-				available = append(available, child)
-			}
+			// Checking for duplicates and sorting takes long enough that it doesn't seem worth it
+			// For reference, with below if statement code it seems to take ~1 second to calculate 1000
+			// nodes(probably longer for more difficult games), and without the if statement it takes
+			// about 10ms to calculate 1000 nodes, and it seems to keep that speed even for solves that
+			// that take about 500k nodes. If I find a use case where it's better to sort,
+			// then I will uncomment this code
+			// if !ContainsNode(available, child) {
+			// available = InsertSorted(available, child, goal, shortest)
+			// }
 		}
-		if numNodesCalculated%1000 == 0 {
+		available = append(available, newNodes...)
+		if numNodesCalculated%10000 == 0 {
 			if time.Since(start).Minutes() >= 1.0 {
 				logrus.Info("Game could not be completed")
 				return CompletedGame{
-					Nums:     playNums,
-					Complete: false,
-					Goal:     goal,
+					Nums:      playNums,
+					Complete:  false,
+					Goal:      goal,
+					TimeTaken: time.Since(start).String(),
 				}
 			}
 		}
 	}
 }
 
-// func genGame(req PlayRequest) (DetailedRequest, error) {
-// 	if req.NumBig+req.NumSmall != 6 || req.NumBig > 4 || req.NumBig < 0 || req.NumSmall < 2 {
-// 		return DetailedRequest{}, errors.New("invalid configuration for game")
-// 	}
+func genGame(numSmall, numBig int) (DetailedRequest, error) {
+	if numBig+numSmall != 6 || numBig > 4 || numBig < 0 || numSmall < 2 {
+		return DetailedRequest{}, GenGameError{
+			Msg:      "Could not generate game based on inputs",
+			NumSmall: numSmall,
+			NumBig:   numBig,
+		}
+	}
 
-// 	smallNumList := []int{1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10}
-// 	bigNumList := []int{25, 50, 75, 100}
+	smallNumList := []int{1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10}
+	bigNumList := []int{25, 50, 75, 100}
 
-// 	numsList := []int{}
+	numsList := []int{}
 
-// 	for i := 0; i < req.NumSmall; i++ {
-// 		index := rand.Intn(len(smallNumList))
-// 		numsList = append(numsList, smallNumList[index])
-// 		smallNumList = RemoveElement(smallNumList, index)
-// 	}
+	for i := 0; i < numSmall; i++ {
+		index := rand.Intn(len(smallNumList))
+		numsList = append(numsList, smallNumList[index])
+		smallNumList = RemoveElement(smallNumList, index)
+	}
 
-// 	for i := 0; i < req.NumBig; i++ {
-// 		index := rand.Intn(len(bigNumList))
-// 		numsList = append(numsList, bigNumList[index])
-// 		bigNumList = RemoveElement(bigNumList, index)
-// 	}
+	for i := 0; i < numBig; i++ {
+		index := rand.Intn(len(bigNumList))
+		numsList = append(numsList, bigNumList[index])
+		bigNumList = RemoveElement(bigNumList, index)
+	}
 
-// 	goal := rand.Intn(900) + 100
+	goal := rand.Intn(900) + 100
 
-// 	return DetailedRequest{Goal: goal, Nums: numsList}, nil
-// }
+	return DetailedRequest{Goal: goal, Nums: numsList}, nil
+}
+
+type GenGameError struct {
+	Msg      string `json:"message"`
+	NumSmall int    `json:"numSmall"`
+	NumBig   int    `json:"numBig"`
+}
+
+func (g GenGameError) Error() string {
+	return fmt.Sprint("Could not generate game where smallNums=%s and bigNums=%s", g.NumSmall, g.NumBig)
+}

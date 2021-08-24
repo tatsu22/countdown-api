@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/sirupsen/logrus"
 )
@@ -58,7 +57,6 @@ func (node *Node) GenChildren() []Node {
 				logrus.Warn("You should not see this, added operation and length <= 2")
 				children = append(children, Node{Equation: newEquation, RemainingNums: node.RemainingNums, Result: 0})
 			}
-			// logrus.Debug("added node: ", node.Children[len(node.Children)-1])
 		}
 	}
 
@@ -88,74 +86,6 @@ func GenBaseNode(nums []int) *Node {
 	return &Node{Equation: []string{}, RemainingNums: nums, Result: 0}
 }
 
-func InsertSorted(s []Node, e Node, goal int, shortest bool) []Node {
-	// This will not guarantee shortest solution, but is faster than looking for shortest
-
-	var i int
-
-	if shortest {
-		i = sort.Search(len(s), func(i int) bool {
-			if len(s[i].Equation) == len(e.Equation) {
-				return AbsVal(s[i].Result-goal) > AbsVal(e.Result-goal)
-			}
-			return len(s[i].Equation) > len(e.Equation)
-		})
-	} else {
-		i = sort.Search(len(s), func(i int) bool { return AbsVal(s[i].Result-goal) > AbsVal(e.Result-goal) })
-	}
-
-	// This will give us shortest solution guaranteed
-	// i := sort.Search(len(s), func(i int) bool {
-	// 	if len(s[i].Equation) == len(e.Equation) {
-	// 		return utils.AbsVal(s[i].Result-goal) > utils.AbsVal(e.Result-goal)
-	// 	}
-	// 	return len(s[i].Equation) > len(e.Equation)
-	// })
-
-	// If we get back the length then it was unsorted, have to append b/c insertion logic below will break if we give it the length
-	if i == len(s) {
-		s = append(s, e)
-		return s
-	}
-	s = append(s, Node{})
-	copy(s[i+1:], s[i:])
-	s[i] = e
-	return s
-}
-
-func Compare(a, b Node) bool {
-	if len(a.RemainingNums) != len(b.RemainingNums) || len(a.Equation) != len(b.Equation) || a.Result != b.Result {
-		return false
-	}
-
-	// Here we know all lists are same length and result is the same
-
-	// Check for equation equality
-	for i := 0; i < len(a.Equation); i++ {
-		if a.Equation[i] != b.Equation[i] {
-			return false
-		}
-	}
-
-	// Check for remaining nums equality
-	for i := 0; i < len(a.RemainingNums); i++ {
-		if a.RemainingNums[i] != b.RemainingNums[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
-func ContainsNode(list []Node, a Node) bool {
-	for _, v := range list {
-		if Compare(a, v) {
-			return true
-		}
-	}
-	return false
-}
-
 func EquationToString(equation []string) string {
 	queue := []string{}
 
@@ -171,3 +101,63 @@ func EquationToString(equation []string) string {
 	}
 	return queue[0]
 }
+
+// func InsertSorted(s []Node, e Node, goal int, shortest bool) []Node {
+// 	// This will not guarantee shortest solution, but is faster than looking for shortest
+
+// 	var i int
+
+// 	if shortest {
+// 		i = sort.Search(len(s), func(i int) bool {
+// 			if len(s[i].Equation) == len(e.Equation) {
+// 				return AbsVal(s[i].Result-goal) > AbsVal(e.Result-goal)
+// 			}
+// 			return len(s[i].Equation) > len(e.Equation)
+// 		})
+// 	} else {
+// 		i = sort.Search(len(s), func(i int) bool { return AbsVal(s[i].Result-goal) > AbsVal(e.Result-goal) })
+// 	}
+
+// 	// If we get back the length then it was unsorted, have to append b/c insertion logic below will break if we give it the length
+// 	if i == len(s) {
+// 		s = append(s, e)
+// 		return s
+// 	}
+// 	s = append(s, Node{})
+// 	copy(s[i+1:], s[i:])
+// 	s[i] = e
+// 	return s
+// }
+
+// func Compare(a, b Node) bool {
+// 	if len(a.RemainingNums) != len(b.RemainingNums) || len(a.Equation) != len(b.Equation) || a.Result != b.Result {
+// 		return false
+// 	}
+
+// 	// Here we know all lists are same length and result is the same
+
+// 	// Check for equation equality
+// 	for i := 0; i < len(a.Equation); i++ {
+// 		if a.Equation[i] != b.Equation[i] {
+// 			return false
+// 		}
+// 	}
+
+// 	// Check for remaining nums equality
+// 	for i := 0; i < len(a.RemainingNums); i++ {
+// 		if a.RemainingNums[i] != b.RemainingNums[i] {
+// 			return false
+// 		}
+// 	}
+
+// 	return true
+// }
+
+// func ContainsNode(list []Node, a Node) bool {
+// 	for _, v := range list {
+// 		if Compare(a, v) {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
