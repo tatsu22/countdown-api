@@ -256,5 +256,5 @@ type GenGameError struct {
 }
 
 func (g GenGameError) Error() string {
-	return fmt.Sprint("Could not generate game where smallNums=%s and bigNums=%s", g.NumSmall, g.NumBig)
+	return fmt.Sprintf("Could not generate game where smallNums=%d and bigNums=%d", g.NumSmall, g.NumBig)
 }
