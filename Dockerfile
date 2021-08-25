@@ -13,8 +13,8 @@ RUN go mod download
 COPY *.go ./
 
 # Build
-RUN env GOOS=linux GOARCH=arm GOARM=7 go build -o /countdown-api
-# RUN go build -o /docker-gs-ping
+# RUN env GOOS=linux GOARCH=arm GOARM=7 go build -o /countdown-api
+RUN go build -o /countdown-api
 
 # This is for documentation purposes only.
 # To actually open the port, runtime parameters
