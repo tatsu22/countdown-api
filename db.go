@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	connectionString = "postgres://postgres:secret@192.168.0.1:5433/countdown_api?sslmode=disable"
+	connectionString = "postgres://postgres:secret@database/countdown_api?sslmode=disable"
 )
 
 func Insert(game CompletedGame) bool {
@@ -17,7 +17,7 @@ func Insert(game CompletedGame) bool {
 	defer conn.Close(context.Background())
 
 	sqlStatement := `
-INSERT INTO completed_game (nums, goal, equation_array, equation, complete, time_taken, nodes_calculated)
+INSERT INTO countdown_games (nums, goal, equation_array, equation, complete, time_taken, nodes_calculated)
 VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	_, err := conn.Exec(context.Background(), sqlStatement, game.Nums, game.Goal, game.EquationArray, game.Equation, game.Complete, game.TimeTaken, game.NodesCalculated)
 
@@ -31,7 +31,7 @@ func GetGame(nums []int, goal int) CompletedGame {
 	conn, _ := pgx.Connect(context.Background(), connectionString)
 	defer conn.Close(context.Background())
 
-	sqlStatement := `SELECT nums, goal, equation_array, equation, complete, time_taken, nodes_calculated FROM completed_game WHERE nums=$1 AND goal=$2`
+	sqlStatement := `SELECT nums, goal, equation_array, equation, complete, time_taken, nodes_calculated FROM countdown_games WHERE nums=$1 AND goal=$2`
 
 	var completedGame CompletedGame
 
@@ -58,7 +58,7 @@ func GetAllGames() []CompletedGame {
 
 	var returnList []CompletedGame
 
-	if rows, err := conn.Query(context.Background(), "SELECT * FROM completed_game"); err != nil {
+	if rows, err := conn.Query(context.Background(), "SELECT * FROM countdown_games"); err != nil {
 		logrus.Error("Unable to connect to DB", err)
 		return []CompletedGame{}
 	} else {

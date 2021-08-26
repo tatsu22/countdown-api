@@ -1,0 +1,18 @@
+version: "3"
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    links:
+      - "db:database"
+
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./sql/create-tables.sql:/docker-entrypoint-initdb.d/create-tables.sql
