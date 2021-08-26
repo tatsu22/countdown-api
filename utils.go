@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"sort"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
@@ -145,4 +146,20 @@ func AbsVal(i int) int {
 		return -i
 	}
 	return i
+}
+
+func InsertSorted(s []int, e int) []int {
+
+	i := sort.Search(len(s), func(i int) bool { return s[i] > e })
+
+	// If we get back the length then it was unsorted, have to append
+	// b/c insertion logic below will break if we give it the length
+	if i == len(s) {
+		s = append(s, e)
+		return s
+	}
+	s = append(s, 0)
+	copy(s[i+1:], s[i:])
+	s[i] = e
+	return s
 }

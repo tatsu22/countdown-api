@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -54,7 +55,23 @@ func main() {
 		if err := c.Bind(req); err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, playGameReq(*req))
+
+		sort.Ints(req.Nums)
+
+		completedGame := GetGame(req.Nums, req.Goal)
+
+		if completedGame.Equation != "" {
+			logrus.Info("Game played already! Returning result from DB...")
+			return c.JSON(http.StatusOK, completedGame)
+		}
+
+		completedGame = playGameReq(*req)
+		Insert(completedGame)
+		return c.JSON(http.StatusOK, completedGame)
+	})
+
+	e.GET("/completedGames", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, GetAllGames())
 	})
 
 	// TODO: Use query parameters to generate game
