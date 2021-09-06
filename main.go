@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -41,6 +42,7 @@ func main() {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())   
 
 	e.GET("/", func(c echo.Context) error {
 		return c.HTML(http.StatusOK, "Hello, Docker! <3")
@@ -221,6 +223,8 @@ func playGame(goal int, playNums []int) CompletedGame {
 		}
 		available = append(available, newNodes...)
 		if numNodesCalculated%10000 == 0 {
+			logrus.Info("Num nodes calculated: ", numNodesCalculated)
+			logrus.Info("Num nodes available: ", len(available))
 			if time.Since(start).Minutes() >= 1.0 {
 				logrus.Info("Game could not be completed")
 				return CompletedGame{
@@ -275,3 +279,4 @@ type GenGameError struct {
 func (g GenGameError) Error() string {
 	return fmt.Sprintf("Could not generate game where smallNums=%d and bigNums=%d", g.NumSmall, g.NumBig)
 }
+
