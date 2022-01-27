@@ -11,4 +11,4 @@ A simple Go server/microservice for countdown fun(i.e. solving the numbers game 
 ### Local
 
 1. Clone repo
-2. `go run main.go node.go utils.go`
+2. `docker compose up`
